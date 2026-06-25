@@ -16,13 +16,22 @@ import WarningBanner from '@/components/WarningBanner';
 type Page = 'dashboard' | 'announcements' | 'compare' | 'credential';
 
 export default function Home() {
-  const { state, setState, reset, loaded } = useAppState();
+  const {
+    state,
+    addAnnouncement,
+    removeAnnouncement,
+    editAnnouncement,
+    updateChecklist,
+    updateForm,
+    reset,
+    loaded,
+  } = useAppState();
   const [page, setPage] = useState<Page>('dashboard');
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const announcements = Object.values(state.announcements);
 
-  const addAnnouncement = useCallback(
+  const handleParsed = useCallback(
     (ann: ParsedAnnouncement) => {
       const docs = ann.documents.filter((d) => !d.includes('미확인'));
       const items: ChecklistItem[] = docs.map((d) => ({
@@ -31,41 +40,20 @@ export default function Home() {
         completed: false,
         custom: false,
       }));
-      setState((prev) => ({
-        ...prev,
-        announcements: { ...prev.announcements, [ann.id]: ann },
-        checklists: { ...prev.checklists, [ann.id]: items },
-      }));
+      addAnnouncement(ann, items);
       setSelectedId(ann.id);
       setPage('announcements');
     },
-    [setState],
+    [addAnnouncement],
   );
 
-  function removeAnnouncement(id: string) {
-    setState((prev) => {
-      const { [id]: _a, ...anns } = prev.announcements;
-      const { [id]: _c, ...cls } = prev.checklists;
-      return { ...prev, announcements: anns, checklists: cls };
-    });
+  function handleRemove(id: string) {
+    removeAnnouncement(id);
     if (selectedId === id) setSelectedId(null);
   }
 
-  function editAnnouncement(id: string, field: string, value: string) {
-    setState((prev) => ({
-      ...prev,
-      announcements: {
-        ...prev.announcements,
-        [id]: {
-          ...prev.announcements[id],
-          manualEdits: { ...prev.announcements[id].manualEdits, [field]: value },
-        },
-      },
-    }));
-  }
-
-  function updateChecklist(annId: string, items: ChecklistItem[]) {
-    setState((prev) => ({ ...prev, checklists: { ...prev.checklists, [annId]: items } }));
+  function handleEdit(id: string, field: string, value: string) {
+    editAnnouncement(id, field, value);
   }
 
   function handleSelectAnnouncement(id: string) {
@@ -73,9 +61,9 @@ export default function Home() {
     if (page !== 'announcements') setPage('announcements');
   }
 
-  function handleReset() {
+  async function handleReset() {
     if (confirm('모든 데이터를 초기화하시겠습니까?')) {
-      reset();
+      await reset();
       setSelectedId(null);
     }
   }
@@ -107,8 +95,8 @@ export default function Home() {
             <AnnouncementTable
               announcements={announcements}
               checklists={state.checklists}
-              onParsed={addAnnouncement}
-              onRemove={removeAnnouncement}
+              onParsed={handleParsed}
+              onRemove={handleRemove}
               onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
               selectedId={selectedId}
             />
@@ -134,9 +122,7 @@ export default function Home() {
               <CredentialForm
                 projects={state.form.projects}
                 engineers={state.form.engineers}
-                onChange={(projects, engineers) =>
-                  setState((prev) => ({ ...prev, form: { projects, engineers } }))
-                }
+                onChange={(projects, engineers) => updateForm(projects, engineers)}
               />
             </div>
           )}
@@ -150,8 +136,8 @@ export default function Home() {
             <WarningBanner />
             <AnnouncementCard
               ann={selectedAnn}
-              onEdit={editAnnouncement}
-              onRemove={(id) => { removeAnnouncement(id); setSelectedId(null); }}
+              onEdit={handleEdit}
+              onRemove={(id) => { handleRemove(id); setSelectedId(null); }}
             />
             <ChecklistPanel
               announcementId={selectedAnn.id}
