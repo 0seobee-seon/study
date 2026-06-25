@@ -85,7 +85,7 @@ export default function Home() {
   const selectedAnn = selectedId ? state.announcements[selectedId] : null;
 
   return (
-    <div className="flex h-screen bg-violet-950 overflow-hidden">
+    <div className="flex h-screen bg-white overflow-hidden">
       <Sidebar
         current={page}
         onChange={setPage}
